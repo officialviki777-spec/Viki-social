@@ -1,0 +1,6 @@
+{
+  "name": "Viki Social",
+  "description": "Modern Android social media application inspired by Instagram with stories, posts, direct messaging, user profiles, and sleek purple-black theme.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

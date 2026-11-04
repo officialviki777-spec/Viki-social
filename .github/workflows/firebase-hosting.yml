@@ -1,0 +1,66 @@
+name: Deploy Viki Social to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  build_and_deploy:
+    name: Build & Deploy to Firebase Hosting
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci || npm install
+
+      - name: 🏗️ Build Vite application
+        run: npm run build
+
+      - name: 🔑 Check deployment secret
+        if: "${{ env.HAS_SA == '' && env.HAS_TOKEN == '' }}"
+        env:
+          HAS_SA: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_VIKI_SOCIAL_APP }}"
+          HAS_TOKEN: "${{ secrets.FIREBASE_TOKEN }}"
+        run: |
+          echo "::error::Missing deployment secret! Please add FIREBASE_SERVICE_ACCOUNT_VIKI_SOCIAL_APP (recommended for Android browser) or FIREBASE_TOKEN to your GitHub repository secrets."
+          exit 1
+
+      - name: 🚀 Deploy to Firebase Hosting (Official Action)
+        if: "${{ env.HAS_SA != '' }}"
+        env:
+          HAS_SA: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_VIKI_SOCIAL_APP }}"
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_VIKI_SOCIAL_APP }}'
+          channelId: live
+          projectId: viki-social-app
+
+      - name: 🚀 Deploy to Firebase Hosting (CLI Token Fallback)
+        if: "${{ env.HAS_SA == '' && env.HAS_TOKEN != '' }}"
+        env:
+          HAS_SA: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_VIKI_SOCIAL_APP }}"
+          HAS_TOKEN: "${{ secrets.FIREBASE_TOKEN }}"
+          FIREBASE_TOKEN: "${{ secrets.FIREBASE_TOKEN }}"
+        run: |
+          npx --yes firebase-tools deploy --only hosting --project viki-social-app --token "$FIREBASE_TOKEN"
